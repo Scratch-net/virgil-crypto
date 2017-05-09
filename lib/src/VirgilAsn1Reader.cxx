@@ -66,7 +66,7 @@ int VirgilAsn1Reader::readInteger() {
     int result;
     system_crypto_handler(
             mbedtls_asn1_get_int(&p_, end_, &result),
-            [](int){ std::throw_with_nested(make_error(VirgilCryptoError::InvalidFormat)); }
+            [](int) { std::throw_with_nested(make_error(VirgilCryptoError::InvalidFormat)); }
     );
     return result;
 }
@@ -76,7 +76,7 @@ bool VirgilAsn1Reader::readBool() {
     int result;
     system_crypto_handler(
             mbedtls_asn1_get_bool(&p_, end_, &result),
-            [](int){ std::throw_with_nested(make_error(VirgilCryptoError::InvalidFormat)); }
+            [](int) { std::throw_with_nested(make_error(VirgilCryptoError::InvalidFormat)); }
     );
     return result == 0 ? false : true;
 }
@@ -86,7 +86,7 @@ void VirgilAsn1Reader::readNull() {
     size_t len;
     system_crypto_handler(
             mbedtls_asn1_get_tag(&p_, end_, &len, MBEDTLS_ASN1_NULL),
-            [](int){ std::throw_with_nested(make_error(VirgilCryptoError::InvalidFormat)); }
+            [](int) { std::throw_with_nested(make_error(VirgilCryptoError::InvalidFormat)); }
     );
 }
 
@@ -116,10 +116,20 @@ VirgilByteArray VirgilAsn1Reader::readOctetString() {
     size_t len;
     system_crypto_handler(
             mbedtls_asn1_get_tag(&p_, end_, &len, MBEDTLS_ASN1_OCTET_STRING),
-            [](int){ std::throw_with_nested(make_error(VirgilCryptoError::InvalidFormat)); }
+            [](int) { std::throw_with_nested(make_error(VirgilCryptoError::InvalidFormat)); }
     );
     p_ += len;
     return VIRGIL_BYTE_ARRAY_FROM_PTR_AND_LEN(p_ - len, len);
+}
+
+VirgilByteArray VirgilAsn1Reader::readBitString() {
+    checkState();
+    mbedtls_asn1_bitstring bitString{ 0 };
+    system_crypto_handler(
+            mbedtls_asn1_get_bitstring(&p_, end_, &bitString),
+            [](int) { std::throw_with_nested(make_error(VirgilCryptoError::InvalidFormat)); }
+    );
+    return VIRGIL_BYTE_ARRAY_FROM_PTR_AND_LEN(bitString.p, bitString.len);
 }
 
 VirgilByteArray VirgilAsn1Reader::readUTF8String() {
@@ -127,7 +137,7 @@ VirgilByteArray VirgilAsn1Reader::readUTF8String() {
     size_t len;
     system_crypto_handler(
             mbedtls_asn1_get_tag(&p_, end_, &len, MBEDTLS_ASN1_UTF8_STRING),
-            [](int){ std::throw_with_nested(make_error(VirgilCryptoError::InvalidFormat)); }
+            [](int) { std::throw_with_nested(make_error(VirgilCryptoError::InvalidFormat)); }
     );
     p_ += len;
     return VIRGIL_BYTE_ARRAY_FROM_PTR_AND_LEN(p_ - len, len);
@@ -140,7 +150,7 @@ VirgilByteArray VirgilAsn1Reader::readData() {
     p_ += 1; // Ignore tag value
     system_crypto_handler(
             mbedtls_asn1_get_len(&p_, end_, &len),
-            [](int){ std::throw_with_nested(make_error(VirgilCryptoError::InvalidFormat)); }
+            [](int) { std::throw_with_nested(make_error(VirgilCryptoError::InvalidFormat)); }
     );
     p_ += len;
     return VirgilByteArray(dataStart, p_);
@@ -152,7 +162,7 @@ std::string VirgilAsn1Reader::readOID() {
     size_t len;
     system_crypto_handler(
             mbedtls_asn1_get_tag(&p_, end_, &len, MBEDTLS_ASN1_OID),
-            [](int){ std::throw_with_nested(make_error(VirgilCryptoError::InvalidFormat)); }
+            [](int) { std::throw_with_nested(make_error(VirgilCryptoError::InvalidFormat)); }
     );
     p_ += len;
     return std::string(reinterpret_cast<std::string::const_pointer>(p_ - len), len);
@@ -163,7 +173,7 @@ size_t VirgilAsn1Reader::readSequence() {
     size_t len;
     system_crypto_handler(
             mbedtls_asn1_get_tag(&p_, end_, &len, MBEDTLS_ASN1_CONSTRUCTED | MBEDTLS_ASN1_SEQUENCE),
-            [](int){ std::throw_with_nested(make_error(VirgilCryptoError::InvalidFormat)); }
+            [](int) { std::throw_with_nested(make_error(VirgilCryptoError::InvalidFormat)); }
     );
     return len;
 }
@@ -173,7 +183,7 @@ size_t VirgilAsn1Reader::readSet() {
     size_t len;
     system_crypto_handler(
             mbedtls_asn1_get_tag(&p_, end_, &len, MBEDTLS_ASN1_CONSTRUCTED | MBEDTLS_ASN1_SET),
-            [](int){ std::throw_with_nested(make_error(VirgilCryptoError::InvalidFormat)); }
+            [](int) { std::throw_with_nested(make_error(VirgilCryptoError::InvalidFormat)); }
     );
     return len;
 }

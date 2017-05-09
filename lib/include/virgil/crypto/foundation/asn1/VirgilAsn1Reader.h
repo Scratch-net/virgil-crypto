@@ -123,6 +123,11 @@ public:
      * TODO: Change return type to VirgilByteArray
      */
     std::string readOID();
+
+    /**
+     * @brief Read ASN.1 type: BIT STRING.
+     */
+    VirgilByteArray readBitString();
     ///@}
     /**
      * @name Read Structured ASN.1 Types

@@ -109,6 +109,16 @@ size_t VirgilAsn1Writer::writeInteger(int value) {
     );
 }
 
+size_t VirgilAsn1Writer::writePositiveInteger(const VirgilByteArray& data) {
+    size_t len{ 0 };
+    len += writeData(data);
+    if (len > 0 && (data[0] & 0x80) != 0) {
+        // leftmost bit should be 0 for positive numbers
+        len += writeZero();
+    }
+    return len + markInteger(len);
+}
+
 size_t VirgilAsn1Writer::writeBool(bool value) {
     checkState();
     ensureBufferEnough(kAsn1BoolValueSize);
@@ -125,6 +135,17 @@ size_t VirgilAsn1Writer::writeNull() {
     RETURN_POINTER_DIFF_AFTER_INVOCATION(p_,
             system_crypto_handler(
                     mbedtls_asn1_write_null(&p_, start_)
+            )
+    );
+}
+
+size_t VirgilAsn1Writer::writeZero() {
+    checkState();
+    ensureBufferEnough(1);
+    const unsigned char zero = 0x00;
+    RETURN_POINTER_DIFF_AFTER_INVOCATION(p_,
+            system_crypto_handler(
+                    mbedtls_asn1_write_raw_buffer(&p_, start_, &zero, 1)
             )
     );
 }
@@ -189,6 +210,23 @@ size_t VirgilAsn1Writer::writeData(const VirgilByteArray& data) {
     );
 }
 
+size_t VirgilAsn1Writer::writeData(const VirgilByteArray& data, unsigned char tag) {
+    checkState();
+    ensureBufferEnough(kAsn1TagValueSize + kAsn1LengthValueSize + data.size());
+    RETURN_POINTER_DIFF_AFTER_INVOCATION(p_,
+            {
+                system_crypto_handler(
+                        mbedtls_asn1_write_raw_buffer(&p_, start_, data.data(), data.size())
+                );
+                system_crypto_handler(
+                        mbedtls_asn1_write_len(&p_, start_, data.size())
+                );
+                system_crypto_handler(
+                        mbedtls_asn1_write_tag(&p_, start_, tag)
+                );
+            }
+    );
+}
 
 size_t VirgilAsn1Writer::writeOID(const std::string& oid) {
     checkState();
@@ -203,18 +241,7 @@ size_t VirgilAsn1Writer::writeOID(const std::string& oid) {
 }
 
 size_t VirgilAsn1Writer::writeSequence(size_t len) {
-    checkState();
-    ensureBufferEnough(kAsn1TagValueSize + kAsn1LengthValueSize);
-    RETURN_POINTER_DIFF_AFTER_INVOCATION(p_,
-            {
-                system_crypto_handler(
-                        mbedtls_asn1_write_len(&p_, start_, len)
-                );
-                system_crypto_handler(
-                        mbedtls_asn1_write_tag(&p_, start_, MBEDTLS_ASN1_CONSTRUCTED | MBEDTLS_ASN1_SEQUENCE)
-                );
-            }
-    );
+    return markSequence(len);
 }
 
 size_t VirgilAsn1Writer::writeSet(const std::vector<VirgilByteArray>& set) {
@@ -307,9 +334,9 @@ void VirgilAsn1Writer::ensureBufferEnough(size_t len) {
     if (len > unusedSpace) {
         const size_t usedSpace = bufLen_ - unusedSpace;
         const size_t requiredLenMin = len + usedSpace;
-       if (requiredLenMin > kAsn1SizeMax) {
-           throw make_error(VirgilCryptoError::ExceededMaxSize, "ASN.1 structure size limit was exceeded.");
-       }
+        if (requiredLenMin > kAsn1SizeMax) {
+            throw make_error(VirgilCryptoError::ExceededMaxSize, "ASN.1 structure size limit was exceeded.");
+        }
         const size_t requiredLenMax =
                 (size_t) 1 << (size_t) (std::ceil(std::log((double) requiredLenMin) / std::log(2.0)));
         const size_t adjustedLen = requiredLenMax > kAsn1SizeMax ? kAsn1SizeMax : requiredLenMax;
@@ -327,3 +354,29 @@ void VirgilAsn1Writer::dispose() noexcept {
     }
 }
 
+size_t VirgilAsn1Writer::markInteger(size_t len) {
+    return mark(MBEDTLS_ASN1_INTEGER, len);
+}
+
+size_t VirgilAsn1Writer::markBitString(size_t len) {
+    return mark(MBEDTLS_ASN1_BIT_STRING, len);
+}
+
+size_t VirgilAsn1Writer::markSequence(size_t len) {
+    return mark(MBEDTLS_ASN1_CONSTRUCTED | MBEDTLS_ASN1_SEQUENCE, len);
+}
+
+size_t VirgilAsn1Writer::mark(unsigned char tag, size_t len) {
+    checkState();
+    ensureBufferEnough(kAsn1TagValueSize + kAsn1LengthValueSize);
+    RETURN_POINTER_DIFF_AFTER_INVOCATION(p_,
+            {
+                system_crypto_handler(
+                        mbedtls_asn1_write_len(&p_, start_, len)
+                );
+                system_crypto_handler(
+                        mbedtls_asn1_write_tag(&p_, start_, tag)
+                );
+            }
+    );
+}

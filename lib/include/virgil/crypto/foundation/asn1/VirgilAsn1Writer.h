@@ -70,6 +70,7 @@ public:
      * @brief Dispose internal resources.
      */
     ~VirgilAsn1Writer() noexcept;
+
     /**
      * @name Start and Finish writing
      */
@@ -92,6 +93,7 @@ public:
      */
     virgil::crypto::VirgilByteArray finish();
     ///@}
+
     /**
      * @name Write Simple ASN.1 Types
      */
@@ -102,6 +104,13 @@ public:
      * @return Written bytes.
      */
     size_t writeInteger(int value);
+
+    /**
+     * @brief Write given data as ASN.1 type: INTEGER.
+     * @param data - pre-formatted integer value.
+     * @return Written bytes.
+     */
+    size_t writePositiveInteger(const VirgilByteArray& data);
 
     /**
      * @brief Write ASN.1 type: BOOLEAN.
@@ -115,6 +124,12 @@ public:
      * @return Written bytes.
      */
     size_t writeNull();
+
+    /**
+     * @brief Write zero octet.
+     * @return Written bytes (always 1).
+     */
+    size_t writeZero();
 
     /**
      * @brief Write ASN.1 type: OCTET STRING.
@@ -139,11 +154,19 @@ public:
     size_t writeContextTag(unsigned char tag, size_t len);
 
     /**
-     * @brief Write preformatted ASN.1 structure.
+     * @brief Write pre-formatted ASN.1 structure.
      * @param data - ASN.1 structure.
      * @return Written bytes.
      */
     size_t writeData(const virgil::crypto::VirgilByteArray& data);
+
+    /**
+     * @brief Write pre-formatted ASN.1 structure and mark it with given tag.
+     * @param data - ASN.1 structure.
+     * @param tag - data tag.
+     * @return Written bytes.
+     */
+    size_t writeData(const virgil::crypto::VirgilByteArray& data, unsigned char tag);
 
     /**
      * @brief Write ASN.1 type: OID.
@@ -152,6 +175,7 @@ public:
      */
     size_t writeOID(const std::string& oid);
     ///@}
+
     /**
      * @name Write Structured ASN.1 Types
      */
@@ -170,7 +194,41 @@ public:
      */
     size_t writeSet(const std::vector<virgil::crypto::VirgilByteArray>& set);
     ///@}
+
+    /**
+     * @name Mark already written data with additional tag.
+     */
+    ///@{
+    /**
+     * @brief Write ASN.1 tag: INTEGER.
+     * @param len - length of the data to be marked.
+     * @return Written bytes.
+     */
+    size_t markInteger(size_t len);
+
+    /**
+     * @brief Write ASN.1 tag: BIT STRING.
+     * @param len - length of the data to be marked.
+     * @return Written bytes.
+     */
+    size_t markBitString(size_t len);
+
+    /**
+     * @brief Write ASN.1 tag: SEQUENCE.
+     * @param len - length of the data to be marked.
+     * @return Written bytes.
+     */
+    size_t markSequence(size_t len);
+    ///@}
 private:
+    /**
+     * @brief Mark previously added data with new tag.
+     * @param tag - one of the known ASN.1 tag.
+     * @param len - length of the data that will be marked with the given tag.
+     * @return Written bytes.
+     */
+    size_t mark(unsigned char tag, size_t len);
+
     /**
      * @brief Logically pad the shorter DER encoding after the last octet with dummy octets,
      *     that are smaller in value than any normal octet.
@@ -178,7 +236,7 @@ private:
      * @param finalSize - ASN.1 structure size after padding.
      */
     static virgil::crypto::VirgilByteArray
-            makeComparePadding(const virgil::crypto::VirgilByteArray& asn1, size_t finalSize);
+    makeComparePadding(const virgil::crypto::VirgilByteArray& asn1, size_t finalSize);
 
     /**
      * @brief Perform lexicographic ASN.1 comparison.
