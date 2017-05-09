@@ -100,7 +100,7 @@ std::string VirgilByteArrayUtils::bytesToString(const VirgilByteArray& array) {
 VirgilByteArray VirgilByteArrayUtils::hexToBytes(const std::string& hexStr) {
     VirgilByteArray result;
     std::istringstream istr(hexStr);
-    char hexChars[3] = {0x00};
+    char hexChars[3] = { 0x00 };
     while (istr.read(hexChars, 2)) {
         int byte = 0;
         std::istringstream(hexChars) >> std::hex >> byte;
@@ -138,6 +138,18 @@ VirgilByteArray VirgilByteArrayUtils::popBytes(VirgilByteArray& src, size_t num)
     VirgilByteArray result(src.begin(), src.begin() + num);
     src.erase(src.begin(), src.begin() + num);
     return result;
+}
+
+bool VirgilByteArrayUtils::isZero(const VirgilByteArray& bytes) {
+    if (bytes.empty()) {
+        return true;
+    } else {
+        const auto nonZeroValue =
+                std::find_if_not(bytes.cbegin(), bytes.cend(), [](VirgilByteArray::const_reference value) -> bool {
+                    return value == 0x00;
+                });
+        return nonZeroValue == bytes.cend();
+    }
 }
 
 size_t asn1_write_json_value(VirgilAsn1Writer& asn1Writer, const json& json, const std::string& key) {

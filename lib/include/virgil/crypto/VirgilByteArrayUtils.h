@@ -109,6 +109,14 @@ public:
      */
     static VirgilByteArray popBytes(VirgilByteArray& src, size_t num);
 
+    /**
+     * @brief Define whether given byte sequence is zero.
+     *
+     * @param bytes - bytes under the test.
+     * @return true if all bytes are zero or length is zero, false - otherwise.
+     */
+    static bool isZero(const VirgilByteArray& bytes);
+
 private:
     /**
      * @brief Deny object creation.
