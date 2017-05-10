@@ -43,7 +43,14 @@ set (CMAKE_CXX_STANDARD_REQUIRED ON)
 # Define variables
 set (VIRGIL_CRYPTO_LIB_NAME virgil_crypto)
 
+# Add includes
+include_directories ("${CMAKE_CURRENT_SOURCE_DIR}")
+
+# Grab sources
 aux_source_directory (${CMAKE_CURRENT_SOURCE_DIR} SRC_LIST)
+if (ENABLE_FEATURE_HSM_YUBICO)
+    aux_source_directory ("hsm" SRC_LIST)
+endif (ENABLE_FEATURE_HSM_YUBICO)
 
 foreach (src ${SRC_LIST})
     get_filename_component (file_name ${src} NAME_WE)

@@ -40,7 +40,15 @@ cmake_minimum_required (VERSION 3.2 FATAL_ERROR)
 set (VIRGIL_CRYPTO_LIB_NAME virgil_crypto)
 set (TEST_RUNNER test_runner)
 
+# Add includes
+include_directories("${CMAKE_CURRENT_SOURCE_DIR}")
+
+# Grab sources
 aux_source_directory (${CMAKE_CURRENT_SOURCE_DIR} SRC_LIST)
+if (ENABLE_FEATURE_HSM_YUBICO)
+    aux_source_directory ("hsm" SRC_LIST)
+endif (ENABLE_FEATURE_HSM_YUBICO)
+
 add_executable(${TEST_RUNNER} ${SRC_LIST})
 target_link_libraries (${TEST_RUNNER} ${VIRGIL_CRYPTO_LIB_NAME})
 

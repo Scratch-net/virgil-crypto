@@ -44,14 +44,20 @@ aux_source_directory ("src/internal" src)
 if (LIB_FILE_IO)
     aux_source_directory ("src/stream" src)
 endif()
-
 configure_file (
     "${CMAKE_CURRENT_SOURCE_DIR}/src/VirgilVersion.cxx.in"
     "${CMAKE_CURRENT_BINARY_DIR}/src/VirgilVersion.cxx"
     @ONLY
 )
 
-aux_source_directory("${CMAKE_CURRENT_BINARY_DIR}/src" src)
+aux_source_directory ("${CMAKE_CURRENT_BINARY_DIR}/src" src)
+
+# Add yubico
+if (ENABLE_FEATURE_HSM_YUBICO)
+    aux_source_directory ("src/hsm" src)
+    aux_source_directory ("src/hsm/yubico" src)
+    include (${CMAKE_SOURCE_DIR}/libs_ext/yubicrypt/yubicrypt.cmake)
+endif (ENABLE_FEATURE_HSM_YUBICO)
 
 add_library (${PROJECT_NAME} ${src})
 
@@ -69,7 +75,7 @@ endif ()
 target_include_directories (${PROJECT_NAME}
     PUBLIC "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
 )
-target_link_libraries (${PROJECT_NAME} mbedtls::mbedcrypto mbedtls::ed25519)
+target_link_libraries (${PROJECT_NAME} mbedtls::mbedcrypto mbedtls::ed25519 ${YUBICRYPT_TARGET})
 target_compile_definitions (${PROJECT_NAME} PUBLIC "LIB_FILE_IO=$<BOOL:${LIB_FILE_IO}>" "UCLIBC=$<BOOL:${UCLIBC}>")
 target_compile_definitions (${PROJECT_NAME} PRIVATE "FMT_HEADER_ONLY")
 

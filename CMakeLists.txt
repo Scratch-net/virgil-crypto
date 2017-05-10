@@ -64,6 +64,8 @@
 #     - DOXYGEN_EXCLUDE_PRIVATE - boolean value that defines whether to exclude private API
 #                                 from Doxygen documentation or not
 #
+#     - ENABLE_FEATURE_HSM_YUBICO - boolean value that defines whether to include HSM module to the build, or not.
+#
 # Define variables:
 #     - VIRGIL_VERSION           - library full version.
 #     - VIRGIL_VERSION_MAJOR     - library major version number.
@@ -279,6 +281,9 @@ set (UCLIBC OFF CACHE BOOL "Enable pathches if library is build with uClibc++")
 if (ANDROID)
     set (ANDROID_INSTALL_JNI_DIR_NAME "lib/${ANDROID_NDK_ABI_NAME}")
 endif (ANDROID)
+
+# Configure additional libary features
+set (ENABLE_FEATURE_HSM_YUBICO OFF CACHE BOOL "Enable Yubico HSM (yubicrypt).")
 
 # Configure submodules installation
 set (INSTALL_CORE_LIBS_TMP OFF)
