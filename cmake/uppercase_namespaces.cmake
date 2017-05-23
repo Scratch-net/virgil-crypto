@@ -74,6 +74,12 @@ function (uppercase_namespaces src dst)
         "virgil\\.crypto\\.foundation([ .{;]+)" "Virgil.Crypto.Foundation\\1" local_dst "${local_dst}"
     )
     string (REGEX REPLACE
+        "virgil\\.crypto\\.hsm\\.yubico([ .{;]+)" "Virgil.Crypto.Hsm.Yubico\\1" local_dst "${local_dst}"
+    )
+    string (REGEX REPLACE
+        "virgil\\.crypto\\.hsm([ .{;]+)" "Virgil.Crypto.Hsm\\1" local_dst "${local_dst}"
+    )
+    string (REGEX REPLACE
         "virgil\\.crypto([ .{;]+)" "Virgil.Crypto\\1" local_dst "${local_dst}"
     )
     set (${dst} "${local_dst}" PARENT_SCOPE)
