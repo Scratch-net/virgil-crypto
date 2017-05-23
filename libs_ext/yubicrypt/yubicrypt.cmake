@@ -100,24 +100,49 @@ else ()
     message (STATUS "Yubico platform path: ${TARGET_OS_PATH}")
 endif ()
 
-
-# Copy headers and libraries to the directory ${VIRGIL_DEPENDS_PREFIX}
-file (INSTALL "${TARGET_OS_PATH}/include/" DESTINATION "${VIRGIL_DEPENDS_PREFIX}/include/yubico")
-file (INSTALL "${TARGET_OS_PATH}/lib/" DESTINATION "${VIRGIL_DEPENDS_PREFIX}/lib")
-
-# Find includes and libaries within VIRGIL_DEPENDS_PREFIX
+# Set target includes and libaries within VIRGIL_DEPENDS_PREFIX
 set (YUBICRYPT_INCLUDES "${VIRGIL_DEPENDS_PREFIX}/include")
 set (YUBICRYPT_LIBRARIES_DIR "${VIRGIL_DEPENDS_PREFIX}/lib")
 
-set (YUBICRYPT_LIBRARY "${YUBICRYPT_LIBRARIES_DIR}/libyubicrypt.dylib")
-set (YUBICRYPT_LIBRARY_DEPS "${YUBICRYPT_LIBRARIES_DIR}/yubicrypt_pkcs11.dylib")
+# Copy headers and libraries to the directory ${VIRGIL_DEPENDS_PREFIX}
+file (INSTALL "${TARGET_OS_PATH}/include/" DESTINATION "${YUBICRYPT_INCLUDES}/yubico")
+file (INSTALL "${TARGET_OS_PATH}/lib/" DESTINATION "${YUBICRYPT_LIBRARIES_DIR}")
+if (EXISTS "${TARGET_OS_PATH}/bin/")
+    set (YUBICRYPT_BIN_DIR "${VIRGIL_DEPENDS_PREFIX}/bin")
+    file (INSTALL "${TARGET_OS_PATH}/bin/" DESTINATION "${YUBICRYPT_BIN_DIR}")
+endif ()
+
+find_library (YUBICRYPT_LIBRARY NAMES yubicrypt yubicrypt.dll HINTS "${YUBICRYPT_LIBRARIES_DIR}" NO_DEFAULT_PATH)
+find_library (YUBICRYPT_LIBRARY_DEPS
+    NAMES yubicrypt_pkcs11 libyubicrypt libeay32
+    HINTS "${YUBICRYPT_LIBRARIES_DIR}" "${YUBICRYPT_BIN_DIR}"
+    NO_DEFAULT_PATH
+)
+
+if (YUBICRYPT_LIBRARY)
+    message (STATUS "INFO: Found Yubico libary: ${YUBICRYPT_LIBRARY}")
+else (YUBICRYPT_LIBRARY)
+    message (STATUS "ERROR: Yubico library is not found at path ${YUBICRYPT_LIBRARIES_DIR}.")
+    message (FATAL_ERROR)
+endif (YUBICRYPT_LIBRARY)
+
+if (YUBICRYPT_LIBRARY_DEPS)
+    message (STATUS "INFO: Found Yubico link dependencies: ${YUBICRYPT_LIBRARY_DEPS}")
+else (YUBICRYPT_LIBRARY_DEPS)
+    set (YUBICRYPT_LIBRARY_DEPS "")
+endif (YUBICRYPT_LIBRARY_DEPS)
 
 set (YUBICRYPT_LIBRARIES "${YUBICRYPT_LIBRARY}")
 
 # Create target
 set (YUBICRYPT_TARGET yubico::yubicrypt)
 
-add_library (${YUBICRYPT_TARGET} SHARED IMPORTED)
+if (WIN32)
+    add_library (${YUBICRYPT_TARGET} STATIC IMPORTED)
+else (WIN32)
+    add_library (${YUBICRYPT_TARGET} SHARED IMPORTED)
+endif (WIN32)
+
 set_target_properties(${YUBICRYPT_TARGET} PROPERTIES
     IMPORTED_LINK_INTERFACE_LANGUAGES "C"
     IMPORTED_LOCATION "${YUBICRYPT_LIBRARY}"
