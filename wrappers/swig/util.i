@@ -76,6 +76,8 @@ DEFINE_NAMESPACE(className, package)
 #else
     %ignore package::className::className(const package::className &);
 #endif
+%ignore package::className::className(className&&);
+%ignore package::className::operator=(className&&);
 %include <includePath/className.h>
 %enddef
 
