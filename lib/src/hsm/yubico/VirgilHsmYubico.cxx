@@ -37,6 +37,7 @@
 #include <virgil/crypto/hsm/yubico/VirgilHsmYubico.h>
 
 
+#include <virgil/crypto/VirgilByteArrayUtils.h>
 #include <virgil/crypto/VirgilKeyPair.h>
 #include <virgil/crypto/foundation/VirgilKeyHelper.h>
 #include <virgil/crypto/foundation/VirgilHash.h>
@@ -56,7 +57,6 @@
 #include <mutex>
 #include <memory>
 #include <array>
-#include <virgil/crypto/VirgilByteArrayUtils.h>
 
 using virgil::crypto::VirgilByteArray;
 using virgil::crypto::VirgilKeyPair;
@@ -64,6 +64,7 @@ using virgil::crypto::VirgilCryptoError;
 
 using virgil::crypto::hsm::VirgilHsmKeyInfo;
 using virgil::crypto::hsm::yubico::VirgilHsmYubico;
+using virgil::crypto::hsm::yubico::VirgilHsmYubicoConfig;
 
 using virgil::crypto::foundation::VirgilKeyHelper;
 using virgil::crypto::foundation::VirgilHash;
@@ -75,9 +76,12 @@ using virgil::crypto::foundation::asn1::VirgilAsn1Writer;
  */
 namespace virgil { namespace crypto { namespace hsm { namespace yubico {
 
-class VirgilHsmYubico::Impl {
-public:
-    internal::yubico_connector connector{ internal::make_yubico_connector() };
+struct VirgilHsmYubico::Impl {
+    Impl(VirgilHsmYubicoConfig aConfig, internal::yubico_connector aConnector)
+            : config(std::move(aConfig)), connector(std::move(aConnector)) {}
+
+    VirgilHsmYubicoConfig config;
+    internal::yubico_connector connector;
 };
 
 class VirgilHsmYubico::KeyInfo {
@@ -104,6 +108,24 @@ namespace global {
 
 static size_t instances = { 0 };
 static std::mutex instancesMutex;
+
+static void hsm_increase_instances() {
+    std::lock_guard<std::mutex> lockInstances(instancesMutex);
+    if (instances == 0) {
+        hsm_yubico_handler(yc_init());
+        ++instances;
+    }
+}
+
+static void hsm_decrease_instances() noexcept {
+    std::lock_guard<std::mutex> lockInstances(instancesMutex);
+    if (instances == 1) {
+        hsm_yubico_handler(yc_exit(), [](int) {
+            //TODO: Log this when logging will be added.
+        });
+        --instances;
+    }
+}
 
 }
 
@@ -190,32 +212,36 @@ static yc_algorithm to_yubico_algorithm(VirgilKeyPair::Algorithm algorithm) {
 
 }}}}}
 
-VirgilHsmYubico::VirgilHsmYubico() : impl_(std::make_unique<Impl>()) {
-    std::lock_guard<std::mutex> lockInstances(internal::global::instancesMutex);
-    if (internal::global::instances == 0) {
-        hsm_yubico_handler(yc_init());
-        ++internal::global::instances;
-    }
+VirgilHsmYubico::VirgilHsmYubico(VirgilHsmYubicoConfig config)
+        : impl_(std::make_unique<Impl>(std::move(config), internal::make_yubico_connector())) {
+    internal::global::hsm_increase_instances();
 }
 
 VirgilHsmYubico::~VirgilHsmYubico() noexcept {
-    std::lock_guard<std::mutex> lockInstances(internal::global::instancesMutex);
-    if (internal::global::instances == 1) {
-        hsm_yubico_handler(yc_exit(), [](int) {
-            //TODO: Log this when logging will be added.
-        });
-        --internal::global::instances;
-    }
+    internal::global::hsm_decrease_instances();
 }
 
-VirgilHsmYubico& VirgilHsmYubico::operator=(VirgilHsmYubico&&) = default;
+VirgilHsmYubico::VirgilHsmYubico(const VirgilHsmYubico& other)
+        : impl_(std::make_unique<Impl>(other.impl_->config, internal::make_yubico_connector())) {
+    internal::global::hsm_increase_instances();
+}
 
-VirgilHsmYubico::VirgilHsmYubico(VirgilHsmYubico&&) = default;
+VirgilHsmYubico& VirgilHsmYubico::operator=(const VirgilHsmYubico& other) {
+    VirgilHsmYubico tmp(other.impl_->config);
+    *this = std::move(tmp);
+    internal::global::hsm_increase_instances();
+    return *this;
+}
 
-void VirgilHsmYubico::connect(const std::string& connectorUrl) {
+VirgilHsmYubico& VirgilHsmYubico::operator=(VirgilHsmYubico&&) noexcept = default;
+
+VirgilHsmYubico::VirgilHsmYubico(VirgilHsmYubico&&) noexcept = default;
+
+void VirgilHsmYubico::connect() {
     if (isConnected()) {
         throw make_error(VirgilHsmError::InvalidParams, "Connection already established.");
     }
+    auto connectorUrl = impl_->config.getConnectorUrl();
     char* url = const_cast<char*>(connectorUrl.c_str());
     hsm_yubico_handler(impl_->connector.create(&url, 1));
 }
@@ -226,12 +252,12 @@ void VirgilHsmYubico::disconnect() {
     });
 }
 
-bool VirgilHsmYubico::isConnected() const {
+bool VirgilHsmYubico::isConnected() {
     return impl_->connector.isAlive();
 }
 
-VirgilHsmKeyInfo VirgilHsmYubico::doGetKeyInfo(const VirgilByteArray& privateKey) const {
-    checkConnection();
+VirgilHsmKeyInfo VirgilHsmYubico::getKeyInfo(const VirgilByteArray& privateKey) {
+    establishConnection();
     auto session = internal::create_yubico_session(impl_->connector.get());
     uint16_t keyId = unwrapKey(privateKey);
 
@@ -243,8 +269,8 @@ VirgilHsmKeyInfo VirgilHsmYubico::doGetKeyInfo(const VirgilByteArray& privateKey
     return { internal::from_yubico_algorithm(keyInfo.ycObjectInfo.algorithm) };
 }
 
-VirgilByteArray VirgilHsmYubico::doGenerateKey(VirgilKeyPair::Algorithm keyAlgorithm) {
-    checkConnection();
+VirgilByteArray VirgilHsmYubico::generateKey(VirgilKeyPair::Algorithm keyAlgorithm) {
+    establishConnection();
     auto session = internal::create_yubico_session(impl_->connector.get());
     uint16_t keyId{ 0 };
     uint16_t domains = 16;
@@ -270,12 +296,12 @@ VirgilByteArray VirgilHsmYubico::doGenerateKey(VirgilKeyPair::Algorithm keyAlgor
     return wrapKey(keyId);
 }
 
-VirgilByteArray VirgilHsmYubico::doGenerateRecommendedKey() {
-    return doGenerateKey(VirgilKeyPair::Algorithm::EC_SECP256R1);
+VirgilByteArray VirgilHsmYubico::generateRecommendedKey() {
+    return generateKey(VirgilKeyPair::Algorithm::EC_SECP256R1);
 }
 
-VirgilByteArray VirgilHsmYubico::doExtractPublicKey(const VirgilByteArray& privateKey) const {
-    checkConnection();
+VirgilByteArray VirgilHsmYubico::extractPublicKey(const VirgilByteArray& privateKey) {
+    establishConnection();
     auto session = internal::create_yubico_session(impl_->connector.get());
     const auto keyId = unwrapKey(privateKey);
     std::array<uint8_t, 1024> ecPoint;
@@ -287,16 +313,16 @@ VirgilByteArray VirgilHsmYubico::doExtractPublicKey(const VirgilByteArray& priva
     return VirgilKeyHelper::ecPointToOctetString(VIRGIL_BYTE_ARRAY_FROM_PTR_AND_LEN(ecPoint.data(), rawPublicKeySize));
 }
 
-void VirgilHsmYubico::doDeleteKey(const VirgilByteArray& privateKey) {
-    checkConnection();
+void VirgilHsmYubico::deleteKey(const VirgilByteArray& privateKey) {
+    establishConnection();
     auto session = internal::create_yubico_session(impl_->connector.get());
     const auto keyId = unwrapKey(privateKey);
     hsm_yubico_handler(yc_util_delete_object(session.get(), YC_ASYMMETRIC, keyId));
 }
 
-VirgilByteArray VirgilHsmYubico::doExportPublicKey(const VirgilByteArray& privateKey) const {
+VirgilByteArray VirgilHsmYubico::exportPublicKey(const VirgilByteArray& privateKey) {
     // Get public key info
-    checkConnection();
+    establishConnection();
     auto session = internal::create_yubico_session(impl_->connector.get());
     const auto keyId = unwrapKey(privateKey);
     std::array<uint8_t, 1024> rawPublicKey;
@@ -318,8 +344,8 @@ VirgilByteArray VirgilHsmYubico::doExportPublicKey(const VirgilByteArray& privat
     throw make_error(VirgilCryptoError::InvalidState);
 }
 
-VirgilByteArray VirgilHsmYubico::doProcessRSA(const VirgilByteArray& data, const VirgilByteArray& privateKey) const {
-    checkConnection();
+VirgilByteArray VirgilHsmYubico::processRSA(const VirgilByteArray& data, const VirgilByteArray& privateKey) {
+    establishConnection();
     auto session = internal::create_yubico_session(impl_->connector.get());
     uint16_t keyId = unwrapKey(privateKey);
 
@@ -335,9 +361,8 @@ VirgilByteArray VirgilHsmYubico::doProcessRSA(const VirgilByteArray& data, const
     return result;
 }
 
-VirgilByteArray VirgilHsmYubico::doProcessECDH(
-        const VirgilByteArray& publicKey, const VirgilByteArray& privateKey) const {
-    checkConnection();
+VirgilByteArray VirgilHsmYubico::processECDH(const VirgilByteArray& publicKey, const VirgilByteArray& privateKey) {
+    establishConnection();
     auto session = internal::create_yubico_session(impl_->connector.get());
     uint16_t keyId = unwrapKey(privateKey);
 
@@ -354,8 +379,8 @@ VirgilByteArray VirgilHsmYubico::doProcessECDH(
     return result;
 }
 
-VirgilByteArray VirgilHsmYubico::doSignHash(const VirgilByteArray& digest, const VirgilByteArray& privateKey) const {
-    checkConnection();
+VirgilByteArray VirgilHsmYubico::signHash(const VirgilByteArray& digest, const VirgilByteArray& privateKey) {
+    establishConnection();
     auto session = internal::create_yubico_session(impl_->connector.get());
     uint16_t keyId = unwrapKey(privateKey);
 
@@ -383,10 +408,9 @@ VirgilByteArray VirgilHsmYubico::doSignHash(const VirgilByteArray& digest, const
     return VIRGIL_BYTE_ARRAY_FROM_PTR_AND_LEN(sign, signLength);
 }
 
-void VirgilHsmYubico::checkConnection() const {
+void VirgilHsmYubico::establishConnection() {
     if (!isConnected()) {
-        throw make_error(VirgilHsmError::InvalidOperation,
-                "Operation is not allowed because connection was not established.");
+        connect();
     }
 }
 

@@ -261,7 +261,7 @@ VirgilSymmetricCipher& VirgilCipherBase::getSymmetricCipher() {
 
 VirgilByteArray VirgilCipherBase::doDecryptWithKey(
         const VirgilByteArray& algorithm, const VirgilByteArray& encryptedKey,
-        const VirgilByteArray& privateKey, const VirgilByteArray& privateKeyPassword) const {
+        const VirgilByteArray& privateKey, const VirgilByteArray& privateKeyPassword) {
 
     VirgilAsymmetricCipher asymmetricCipher;
     asymmetricCipher.setPrivateKey(privateKey, privateKeyPassword);
@@ -270,7 +270,7 @@ VirgilByteArray VirgilCipherBase::doDecryptWithKey(
 
 VirgilByteArray VirgilCipherBase::doDecryptWithPassword(
         const VirgilByteArray& encryptedKey, const VirgilByteArray& encryptionAlgorithm,
-        const VirgilByteArray& password) const {
+        const VirgilByteArray& password) {
 
     VirgilPBE pbe;
     pbe.fromAsn1(encryptionAlgorithm);

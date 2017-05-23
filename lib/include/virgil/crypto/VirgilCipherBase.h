@@ -277,11 +277,11 @@ public:
 private:
     virtual VirgilByteArray doDecryptWithKey(
             const VirgilByteArray& algorithm, const VirgilByteArray& encryptedKey,
-            const VirgilByteArray& privateKey, const VirgilByteArray& privateKeyPassword) const;
+            const VirgilByteArray& privateKey, const VirgilByteArray& privateKeyPassword);
 
     virtual VirgilByteArray doDecryptWithPassword(
             const VirgilByteArray& encryptedKey, const VirgilByteArray& encryptionAlgorithm,
-            const VirgilByteArray& password) const;
+            const VirgilByteArray& password);
 
 private:
     class Impl;

@@ -52,17 +52,17 @@ using virgil::crypto::VirgilByteArrayUtils;
 using virgil::crypto::VirgilKeyPair;
 using virgil::crypto::hsm::VirgilHsmCipher;
 using virgil::crypto::hsm::yubico::VirgilHsmYubico;
+using virgil::crypto::hsm::yubico::VirgilHsmYubicoConfig;
 
-static constexpr const char kYubicoConnectorUrl[] = "http://127.0.0.1:12345";
 
 TEST_CASE("EncryptAndDecryptWithGeneratedKeys_EC_SECP256R1", "[hsm-cipher-yubico]") {
 
-    auto hsm = std::make_shared<VirgilHsmYubico>();
-    hsm->connect(kYubicoConnectorUrl);
+
+    auto hsm = VirgilHsmYubico();
     VirgilByteArray dataToEncrypt = VirgilByteArrayUtils::stringToBytes("this is a secret");
     VirgilByteArray aliceId = VirgilByteArrayUtils::stringToBytes("alice");
-    VirgilByteArray alicePrivateKey = hsm->generateKey(VirgilKeyPair::Algorithm::EC_SECP256R1);
-    VirgilByteArray alicePublicKey = hsm->exportPublicKey(alicePrivateKey);
+    VirgilByteArray alicePrivateKey = hsm.generateKey(VirgilKeyPair::Algorithm::EC_SECP256R1);
+    VirgilByteArray alicePublicKey = hsm.exportPublicKey(alicePrivateKey);
 
     VirgilHsmCipher cipher(hsm);
     cipher.addKeyRecipient(aliceId, alicePublicKey);
@@ -76,5 +76,5 @@ TEST_CASE("EncryptAndDecryptWithGeneratedKeys_EC_SECP256R1", "[hsm-cipher-yubico
 
     CHECK(dataToEncrypt == decryptedData);
 
-    hsm->deleteKey(alicePrivateKey);
+    hsm.deleteKey(alicePrivateKey);
 }

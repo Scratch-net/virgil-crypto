@@ -44,7 +44,7 @@
 #include <virgil/crypto/VirgilByteArray.h>
 #include <virgil/crypto/VirgilByteArrayUtils.h>
 #include <virgil/crypto/VirgilKeyPair.h>
-#include <virgil/crypto/foundation/VirgilHash.h>
+#include <virgil/crypto/hsm/VirgilHsm.h>
 #include <virgil/crypto/hsm/yubico/VirgilHsmYubico.h>
 
 using virgil::crypto::VirgilByteArray;
@@ -53,91 +53,84 @@ using virgil::crypto::VirgilKeyPair;
 using virgil::crypto::foundation::VirgilHash;
 using virgil::crypto::hsm::VirgilHsm;
 using virgil::crypto::hsm::yubico::VirgilHsmYubico;
+using virgil::crypto::hsm::yubico::VirgilHsmYubicoConfig;
 
-static constexpr const char kYubicoConnectorUrl[] = "http://127.0.0.1:12345";
 
 TEST_CASE("EstablishConnectionWithValidUrl", "[hsm-yubico]") {
-    auto hsm = std::make_shared<VirgilHsmYubico>();
-    CHECK_NOTHROW(hsm->connect(kYubicoConnectorUrl));
-    CHECK(hsm->isConnected());
-    CHECK_NOTHROW(hsm->disconnect());
-    CHECK_FALSE(hsm->isConnected());
+    auto hsm = VirgilHsmYubico();
+    CHECK_NOTHROW(hsm.connect());
+    CHECK(hsm.isConnected());
+    CHECK_NOTHROW(hsm.disconnect());
+    CHECK_FALSE(hsm.isConnected());
 }
 
 TEST_CASE("GenerateAndRemoveKey", "[hsm-yubico]") {
-    auto hsm = std::make_shared<VirgilHsmYubico>();
-    hsm->connect(kYubicoConnectorUrl);
+    auto hsm = VirgilHsmYubico();
     VirgilByteArray privateKey;
-    CHECK_NOTHROW(privateKey = hsm->generateRecommendedKey());
-    CHECK_NOTHROW(hsm->deleteKey(privateKey));
+    CHECK_NOTHROW(privateKey = hsm.generateRecommendedKey());
+    CHECK_NOTHROW(hsm.deleteKey(privateKey));
 }
 
 TEST_CASE("ExportPublicKeyFromFakePrivateKey", "[hsm-yubico]") {
-    auto hsm = std::make_shared<VirgilHsmYubico>();
-    hsm->connect(kYubicoConnectorUrl);
+    auto hsm = VirgilHsmYubico();
     VirgilByteArray privateKey = VirgilByteArrayUtils::hexToBytes("300702010002024c39");
     VirgilByteArray publicKey;
-    CHECK_THROWS(publicKey = hsm->exportPublicKey(privateKey));
+    CHECK_THROWS(publicKey = hsm.exportPublicKey(privateKey));
 }
 
 TEST_CASE("ExportPublicKeyFromGeneratedPrivateKey", "[hsm-yubico]") {
-    auto hsm = std::make_shared<VirgilHsmYubico>();
-    hsm->connect(kYubicoConnectorUrl);
-    VirgilByteArray privateKey = hsm->generateRecommendedKey();
+    auto hsm = VirgilHsmYubico();
+    VirgilByteArray privateKey = hsm.generateRecommendedKey();
     VirgilByteArray publicKey;
-    CHECK_NOTHROW(publicKey = hsm->exportPublicKey(privateKey));
-    hsm->deleteKey(privateKey);
+    CHECK_NOTHROW(publicKey = hsm.exportPublicKey(privateKey));
+    hsm.deleteKey(privateKey);
 }
 
 TEST_CASE("ExportPublicKeyFromGeneratedPrivateKey_RSA_2048", "[hsm-yubico]") {
-    auto hsm = std::make_shared<VirgilHsmYubico>();
-    hsm->connect(kYubicoConnectorUrl);
-    VirgilByteArray privateKey = hsm->generateKey(VirgilKeyPair::Algorithm::RSA_2048);
+    auto hsm = VirgilHsmYubico();
+    VirgilByteArray privateKey = hsm.generateKey(VirgilKeyPair::Algorithm::RSA_2048);
     VirgilByteArray publicKey;
-    CHECK_NOTHROW(publicKey = hsm->exportPublicKey(privateKey));
-    hsm->deleteKey(privateKey);
+    CHECK_NOTHROW(publicKey = hsm.exportPublicKey(privateKey));
+    hsm.deleteKey(privateKey);
 }
 
 TEST_CASE("ExportPublicKeyFromGeneratedPrivateKey_EC_SECP256R1", "[hsm-yubico]") {
-    auto hsm = std::make_shared<VirgilHsmYubico>();
-    hsm->connect(kYubicoConnectorUrl);
-    VirgilByteArray privateKey = hsm->generateKey(VirgilKeyPair::Algorithm::EC_SECP256R1);
+    auto hsm = VirgilHsmYubico();
+    VirgilByteArray privateKey = hsm.generateKey(VirgilKeyPair::Algorithm::EC_SECP256R1);
     VirgilByteArray publicKey;
-    CHECK_NOTHROW(publicKey = hsm->exportPublicKey(privateKey));
-    hsm->deleteKey(privateKey);
+    CHECK_NOTHROW(publicKey = hsm.exportPublicKey(privateKey));
+    hsm.deleteKey(privateKey);
 }
 
 TEST_CASE("ComputeSharedKeyFromGeneratedKeys_EC_SECP256R1", "[hsm-yubico]") {
-    auto hsm = std::make_shared<VirgilHsmYubico>();
-    hsm->connect(kYubicoConnectorUrl);
-    VirgilByteArray alicePrivateKey = hsm->generateKey(VirgilKeyPair::Algorithm::EC_SECP256R1);
-    VirgilByteArray alicePublicKey = hsm->extractPublicKey(alicePrivateKey);
+    auto hsm = VirgilHsmYubico();
+    VirgilByteArray alicePrivateKey = hsm.generateKey(VirgilKeyPair::Algorithm::EC_SECP256R1);
+    VirgilByteArray alicePublicKey = hsm.extractPublicKey(alicePrivateKey);
 
-    VirgilByteArray bobPrivateKey = hsm->generateKey(VirgilKeyPair::Algorithm::EC_SECP256R1);
-    VirgilByteArray bobPublicKey = hsm->extractPublicKey(bobPrivateKey);
+    VirgilByteArray bobPrivateKey = hsm.generateKey(VirgilKeyPair::Algorithm::EC_SECP256R1);
+    VirgilByteArray bobPublicKey = hsm.extractPublicKey(bobPrivateKey);
 
     VirgilByteArray aliceSharedKey;
-    CHECK_NOTHROW(aliceSharedKey = hsm->processECDH(bobPublicKey, alicePrivateKey));
+    CHECK_NOTHROW(aliceSharedKey = hsm.processECDH(bobPublicKey, alicePrivateKey));
     CHECK_FALSE(aliceSharedKey.empty());
 
     VirgilByteArray bobSharedKey;
-    CHECK_NOTHROW(bobSharedKey = hsm->processECDH(alicePublicKey, bobPrivateKey));
+    CHECK_NOTHROW(bobSharedKey = hsm.processECDH(alicePublicKey, bobPrivateKey));
     CHECK_FALSE(bobSharedKey.empty());
 
     CHECK(VirgilByteArrayUtils::bytesToHex(aliceSharedKey) == VirgilByteArrayUtils::bytesToHex(bobSharedKey));
 
-    hsm->deleteKey(alicePrivateKey);
-    hsm->deleteKey(bobPrivateKey);
+    hsm.deleteKey(alicePrivateKey);
+    hsm.deleteKey(bobPrivateKey);
 }
 
 TEST_CASE("MakeSignatureWithGeneratedPrivateKey", "[hsm-yubico]") {
-    auto hsm = std::make_shared<VirgilHsmYubico>();
-    hsm->connect(kYubicoConnectorUrl);
-    VirgilByteArray privateKey = hsm->generateKey(VirgilKeyPair::Algorithm::EC_SECP256R1);
+    auto hsm = VirgilHsmYubico();
+    VirgilByteArray privateKey = hsm.generateKey(VirgilKeyPair::Algorithm::EC_SECP256R1);
     VirgilByteArray signature;
     VirgilHash hash(VirgilHash::Algorithm::SHA384);
     const auto data = VirgilByteArrayUtils::stringToBytes("hello");
     const auto digest = hash.hash(data);
-    CHECK_NOTHROW(signature = hsm->signHash(digest, privateKey));
-    hsm->deleteKey(privateKey);
+    CHECK_NOTHROW(signature = hsm.signHash(digest, privateKey));
+    hsm.deleteKey(privateKey);
 }

@@ -47,16 +47,16 @@ namespace virgil { namespace crypto { namespace hsm {
 
 class VirgilHsmCipher : public VirgilCipher {
 public:
-    explicit VirgilHsmCipher(std::shared_ptr<const VirgilHsm> hsm);
+    explicit VirgilHsmCipher(VirgilHsm hsm);
 private:
     VirgilByteArray doDecryptWithKey(
             const VirgilByteArray& algorithm, const VirgilByteArray& encryptedKey,
-            const VirgilByteArray& privateKey, const VirgilByteArray& privateKeyPassword) const override;
+            const VirgilByteArray& privateKey, const VirgilByteArray& privateKeyPassword) override;
 
-    VirgilByteArray eciesDecrypt(const VirgilByteArray& encryptedKey, const VirgilByteArray& privateKey) const;
+    VirgilByteArray eciesDecrypt(const VirgilByteArray& encryptedKey, const VirgilByteArray& privateKey);
 
 private:
-    std::shared_ptr<const VirgilHsm> hsm_;
+    VirgilHsm hsm_;
 };
 
 }}}

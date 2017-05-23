@@ -34,43 +34,14 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-/**
- * @file test_hsm_signer.cxx
- * @brief Covers class VirgilHsmSigner
- */
+#include <virgil/crypto/hsm/yubico/VirgilHsmYubicoConfig.h>
 
-#include <catch.hpp>
-
-#include <virgil/crypto/VirgilByteArray.h>
-#include <virgil/crypto/VirgilByteArrayUtils.h>
-#include <virgil/crypto/VirgilKeyPair.h>
-#include <virgil/crypto/hsm/VirgilHsmSigner.h>
-#include <virgil/crypto/hsm/yubico/VirgilHsmYubico.h>
-
-using virgil::crypto::VirgilByteArray;
-using virgil::crypto::VirgilByteArrayUtils;
-using virgil::crypto::VirgilKeyPair;
-using virgil::crypto::hsm::VirgilHsmSigner;
-using virgil::crypto::hsm::yubico::VirgilHsmYubico;
 using virgil::crypto::hsm::yubico::VirgilHsmYubicoConfig;
 
-TEST_CASE("SignAndVerifyWithGeneratedKeys_EC_SECP256R1", "[hsm-signer-yubico]") {
+std::string VirgilHsmYubicoConfig::getConnectorUrl() const {
+    return connectorUrl_;
+}
 
-    auto hsm = VirgilHsmYubico();
-    VirgilByteArray dataToSigned = VirgilByteArrayUtils::stringToBytes("this is a secret");
-    VirgilByteArray alicePrivateKey = hsm.generateKey(VirgilKeyPair::Algorithm::EC_SECP256R1);
-    VirgilByteArray alicePublicKey = hsm.exportPublicKey(alicePrivateKey);
-
-    VirgilHsmSigner signer(hsm);
-
-    VirgilByteArray signature;
-    CHECK_NOTHROW(signature = signer.sign(dataToSigned, alicePrivateKey));
-    CHECK(!signature.empty());
-
-    bool isVerified { false };
-    CHECK_NOTHROW(isVerified = signer.verify(dataToSigned, signature, alicePublicKey));
-
-    CHECK(isVerified);
-
-    hsm.deleteKey(alicePrivateKey);
+void VirgilHsmYubicoConfig::setConnectorUrl(std::string connectorUrl) {
+    connectorUrl_ = std::move(connectorUrl);
 }

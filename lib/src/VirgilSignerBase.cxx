@@ -58,12 +58,12 @@ VirgilHash::Algorithm VirgilSignerBase::getHashAlgorithm() const {
 
 VirgilByteArray VirgilSignerBase::signHash(
         const VirgilByteArray& digest, const VirgilByteArray& privateKey,
-        const VirgilByteArray& privateKeyPassword) const {
+        const VirgilByteArray& privateKeyPassword) {
     return doSignHash(digest, privateKey, privateKeyPassword);
 }
 
 bool VirgilSignerBase::verifyHash(
-        const VirgilByteArray& digest, const VirgilByteArray& signature, const VirgilByteArray& publicKey) const {
+        const VirgilByteArray& digest, const VirgilByteArray& signature, const VirgilByteArray& publicKey) {
     return doVerifyHash(digest, signature, publicKey);
 }
 
@@ -87,7 +87,7 @@ VirgilByteArray VirgilSignerBase::unpackSignature(const VirgilByteArray& packedS
 
 VirgilByteArray VirgilSignerBase::doSignHash(
         const VirgilByteArray& digest, const VirgilByteArray& privateKey,
-        const VirgilByteArray& privateKeyPassword) const {
+        const VirgilByteArray& privateKeyPassword) {
 
     VirgilAsymmetricCipher cipher;
     cipher.setPrivateKey(privateKey, privateKeyPassword);
@@ -98,7 +98,7 @@ VirgilByteArray VirgilSignerBase::doSignHash(
 }
 
 bool VirgilSignerBase::doVerifyHash(
-        const VirgilByteArray& digest, const VirgilByteArray& signature, const VirgilByteArray& publicKey) const {
+        const VirgilByteArray& digest, const VirgilByteArray& signature, const VirgilByteArray& publicKey) {
 
     VirgilAsymmetricCipher cipher;
     cipher.setPublicKey(publicKey);

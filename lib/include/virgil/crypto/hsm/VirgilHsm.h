@@ -47,48 +47,140 @@
 namespace virgil { namespace crypto { namespace hsm {
 
 class VirgilHsm {
+private:
+    template<typename T>
+    class VirgilHsmImpl;
+
 public:
-    VirgilHsmKeyInfo getKeyInfo(const VirgilByteArray& privateKey) const;
+    template<typename T>
+    VirgilHsm(T hsm) : self_(new VirgilHsmImpl<T>(std::move(hsm))) {
+    }
+
+    void connect();
+
+    void disconnect();
+
+    bool isConnected();
+
+    VirgilHsmKeyInfo getKeyInfo(const VirgilByteArray& privateKey);
 
     VirgilByteArray generateKey(VirgilKeyPair::Algorithm keyAlgorithm);
 
     VirgilByteArray generateRecommendedKey();
 
-    VirgilByteArray extractPublicKey(const VirgilByteArray& privateKey) const;
+    VirgilByteArray extractPublicKey(const VirgilByteArray& privateKey);
 
     void deleteKey(const VirgilByteArray& privateKey);
 
-    VirgilByteArray exportPublicKey(const VirgilByteArray& privateKey) const;
+    VirgilByteArray exportPublicKey(const VirgilByteArray& privateKey);
 
-    VirgilByteArray processRSA(const VirgilByteArray& data, const VirgilByteArray& privateKey) const;
+    VirgilByteArray processRSA(const VirgilByteArray& data, const VirgilByteArray& privateKey);
 
-    VirgilByteArray processECDH(const VirgilByteArray& publicKey, const VirgilByteArray& privateKey) const;
+    VirgilByteArray processECDH(const VirgilByteArray& publicKey, const VirgilByteArray& privateKey);
 
-    VirgilByteArray signHash(const VirgilByteArray& digest, const VirgilByteArray& privateKey) const;
+    VirgilByteArray signHash(const VirgilByteArray& digest, const VirgilByteArray& privateKey);
 
-private:
-    virtual VirgilHsmKeyInfo doGetKeyInfo(const VirgilByteArray& privateKey) const = 0;
+public:
+    VirgilHsm(const VirgilHsm& other);
 
-    virtual VirgilByteArray doGenerateKey(VirgilKeyPair::Algorithm keyAlgorithm) = 0;
+    VirgilHsm(VirgilHsm&& other) noexcept = default;
 
-    virtual VirgilByteArray doGenerateRecommendedKey() = 0;
+    VirgilHsm& operator=(const VirgilHsm& other);
 
-    virtual VirgilByteArray doExtractPublicKey(const VirgilByteArray& privateKey) const = 0;
+    VirgilHsm& operator=(VirgilHsm&& other) noexcept = default;
 
-    virtual void doDeleteKey(const VirgilByteArray& privateKey) = 0;
-
-    virtual VirgilByteArray doExportPublicKey(const VirgilByteArray& privateKey) const = 0;
-
-    virtual VirgilByteArray doProcessRSA(const VirgilByteArray& data, const VirgilByteArray& privateKey) const = 0;
-
-    virtual VirgilByteArray doProcessECDH(const VirgilByteArray& publicKey, const VirgilByteArray& privateKey) const = 0;
-
-    virtual VirgilByteArray doSignHash(const VirgilByteArray& digest, const VirgilByteArray& privateKey) const = 0;
+    ~VirgilHsm() noexcept = default;
 
 private:
-    VirgilByteArray wrapKey(const VirgilByteArray& privateKey) const;
+    struct VirgilHsmInterface {
+        virtual void doConnect() = 0;
 
-    VirgilByteArray unwrapKey(const VirgilByteArray& wrappedPrivateKey) const;
+        virtual void doDisconnect() = 0;
+
+        virtual bool doIsConnected() = 0;
+
+        virtual VirgilHsmKeyInfo doGetKeyInfo(const VirgilByteArray& privateKey) = 0;
+
+        virtual VirgilByteArray doGenerateKey(VirgilKeyPair::Algorithm keyAlgorithm) = 0;
+
+        virtual VirgilByteArray doGenerateRecommendedKey() = 0;
+
+        virtual VirgilByteArray doExtractPublicKey(const VirgilByteArray& privateKey) = 0;
+
+        virtual void doDeleteKey(const VirgilByteArray& privateKey) = 0;
+
+        virtual VirgilByteArray doExportPublicKey(const VirgilByteArray& privateKey) = 0;
+
+        virtual VirgilByteArray doProcessRSA(const VirgilByteArray& data, const VirgilByteArray& privateKey) = 0;
+
+        virtual VirgilByteArray doProcessECDH(const VirgilByteArray& publicKey, const VirgilByteArray& privateKey) = 0;
+
+        virtual VirgilByteArray doSignHash(const VirgilByteArray& digest, const VirgilByteArray& privateKey) = 0;
+
+        virtual VirgilHsmInterface* doCopy() const = 0;
+    };
+
+    template<typename T>
+    struct VirgilHsmImpl : VirgilHsmInterface {
+        VirgilHsmImpl(T hsmImpl) : hsmImpl_(std::move(hsmImpl)) {}
+
+        void doConnect() override {
+            hsmImpl_.connect();
+        }
+
+        void doDisconnect() override {
+            hsmImpl_.disconnect();
+        }
+
+        bool doIsConnected() override {
+            return hsmImpl_.isConnected();
+        }
+
+        VirgilHsmKeyInfo doGetKeyInfo(const VirgilByteArray& privateKey) override {
+            return hsmImpl_.getKeyInfo(privateKey);
+        }
+
+        VirgilByteArray doGenerateKey(VirgilKeyPair::Algorithm keyAlgorithm) override {
+            return hsmImpl_.generateKey(keyAlgorithm);
+        }
+
+        VirgilByteArray doGenerateRecommendedKey() override {
+            return hsmImpl_.generateRecommendedKey();
+        }
+
+        VirgilByteArray doExtractPublicKey(const VirgilByteArray& privateKey) override {
+            return hsmImpl_.extractPublicKey(privateKey);
+        }
+
+        void doDeleteKey(const VirgilByteArray& privateKey) override {
+            hsmImpl_.deleteKey(privateKey);
+        }
+
+        VirgilByteArray doExportPublicKey(const VirgilByteArray& privateKey) override {
+            return hsmImpl_.exportPublicKey(privateKey);
+        }
+
+        VirgilByteArray doProcessRSA(const VirgilByteArray& data, const VirgilByteArray& privateKey) override {
+            return hsmImpl_.processRSA(data, privateKey);
+        }
+
+        VirgilByteArray doProcessECDH(const VirgilByteArray& publicKey, const VirgilByteArray& privateKey) override {
+            return hsmImpl_.processECDH(publicKey, privateKey);
+        }
+
+        VirgilByteArray doSignHash(const VirgilByteArray& digest, const VirgilByteArray& privateKey) override {
+            return hsmImpl_.signHash(digest, privateKey);
+        }
+
+        VirgilHsmInterface* doCopy() const override {
+            return new VirgilHsmImpl(*this);
+        }
+    private:
+        T hsmImpl_;
+    };
+
+private:
+    std::unique_ptr<VirgilHsmInterface> self_;
 };
 
 }}}

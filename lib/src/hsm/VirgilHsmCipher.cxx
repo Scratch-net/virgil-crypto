@@ -92,7 +92,7 @@ static int hsm_key_compute_shared_wrap(
     (void) f_rng;
     (void) p_rng;
 
-    const VirgilHsm* hsm = static_cast<const VirgilHsm*>(p_rng);
+    VirgilHsm* hsm = static_cast<VirgilHsm*>(p_rng);
     const KeyContext* publicKey = static_cast<KeyContext*>(pub);
     const KeyContext* privateKey = static_cast<KeyContext*>(prv);
 
@@ -155,21 +155,21 @@ const mbedtls_ecies_info_t ecies_hsm_info = {
 
 } //internal
 
-VirgilHsmCipher::VirgilHsmCipher(std::shared_ptr<const VirgilHsm> hsm)
-        : hsm_(std::move(hsm)) {
-    if (!hsm_) {
-        throw make_error(VirgilCryptoError::InvalidArgument);
-    }
+VirgilHsmCipher::VirgilHsmCipher(VirgilHsm hsm) : hsm_(std::move(hsm)) {
 }
 
 VirgilByteArray VirgilHsmCipher::doDecryptWithKey(
         const VirgilByteArray& algorithm, const VirgilByteArray& encryptedKey,
-        const VirgilByteArray& privateKey, const VirgilByteArray&) const {
+        const VirgilByteArray& privateKey, const VirgilByteArray&) {
+
+    if (!hsm_.isConnected()) {
+        hsm_.connect();
+    }
 
     auto keyAlgorithm = VirgilKeyHelper::readAlgorithm(algorithm, encryptedKey.size());
 
     if (VirgilKeyHelper::isRSA(keyAlgorithm)) {
-        return hsm_->processRSA(encryptedKey, privateKey);
+        return hsm_.processRSA(encryptedKey, privateKey);
     }
 
     if (VirgilKeyHelper::isEC(keyAlgorithm)) {
@@ -181,9 +181,9 @@ VirgilByteArray VirgilHsmCipher::doDecryptWithKey(
 
 
 VirgilByteArray VirgilHsmCipher::eciesDecrypt(
-        const VirgilByteArray& encryptedKey, const VirgilByteArray& privateKey) const {
+        const VirgilByteArray& encryptedKey, const VirgilByteArray& privateKey) {
 
-    auto keyInfo = hsm_->getKeyInfo(privateKey);
+    auto keyInfo = hsm_.getKeyInfo(privateKey);
 
     internal::KeyContext keyContext;
     keyContext.key = privateKey;
@@ -193,8 +193,7 @@ VirgilByteArray VirgilHsmCipher::eciesDecrypt(
     VirgilByteArray result(resultSize);
     foundation::system_crypto_handler(mbedtls_ecies_decrypt(
             &keyContext, &internal::ecies_hsm_info,
-            VIRGIL_BYTE_ARRAY_TO_PTR_AND_LEN(encryptedKey), result.data(), &resultSize, resultSize,
-            nullptr, const_cast<VirgilHsm*>(hsm_.get())));
+            VIRGIL_BYTE_ARRAY_TO_PTR_AND_LEN(encryptedKey), result.data(), &resultSize, resultSize, nullptr, &hsm_));
 
     result.resize(resultSize);
 

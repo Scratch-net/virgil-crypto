@@ -70,7 +70,7 @@ public:
      */
     VirgilByteArray signHash(
             const VirgilByteArray& digest, const VirgilByteArray& privateKey,
-            const VirgilByteArray& privateKeyPassword = VirgilByteArray()) const;
+            const VirgilByteArray& privateKeyPassword = VirgilByteArray());
 
     /**
      * @brief Verify signature over pre-calculated hash.
@@ -82,7 +82,7 @@ public:
      */
     bool verifyHash(
             const VirgilByteArray& digest, const VirgilByteArray& signature,
-            const VirgilByteArray& publicKey) const;
+            const VirgilByteArray& publicKey);
 
 protected:
     /**
@@ -124,13 +124,13 @@ private:
      */
     virtual VirgilByteArray doSignHash(
             const VirgilByteArray& digest, const VirgilByteArray& privateKey,
-            const VirgilByteArray& privateKeyPassword) const;
+            const VirgilByteArray& privateKeyPassword);
 
     /**
      * @see verifyHash()
      */
     virtual bool doVerifyHash(
-            const VirgilByteArray& digest, const VirgilByteArray& signature, const VirgilByteArray& publicKey) const;
+            const VirgilByteArray& digest, const VirgilByteArray& signature, const VirgilByteArray& publicKey);
 
 private:
     foundation::VirgilHash::Algorithm hashAlgorithm_;

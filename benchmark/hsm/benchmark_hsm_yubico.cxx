@@ -86,6 +86,7 @@
 #include <virgil/crypto/VirgilByteArrayUtils.h>
 #include <virgil/crypto/VirgilKeyPair.h>
 
+#include <virgil/crypto/foundation/VirgilHash.h>
 #include <virgil/crypto/hsm/yubico/VirgilHsmYubico.h>
 
 using std::placeholders::_1;
@@ -97,36 +98,32 @@ using virgil::crypto::foundation::VirgilHash;
 
 using virgil::crypto::hsm::yubico::VirgilHsmYubico;
 
-static constexpr const char kYubicoConnectorUrl[] = "http://127.0.0.1:12345";
-
 void benchmark_generate_key(benchpress::context* ctx, VirgilKeyPair::Algorithm keyAlgorithm) {
-    auto hsm = std::make_shared<VirgilHsmYubico>();
-    hsm->connect(kYubicoConnectorUrl);
+    auto hsm = VirgilHsmYubico();
     ctx->reset_timer();
     for (size_t i = 0; i < ctx->num_iterations(); ++i) {
         ctx->start_timer();
-        auto key = hsm->generateKey(keyAlgorithm);
+        auto key = hsm.generateKey(keyAlgorithm);
         ctx->stop_timer();
-        hsm->deleteKey(key);
+        hsm.deleteKey(key);
     }
 }
 
 void benchmark_sign(benchpress::context* ctx, VirgilKeyPair::Algorithm keyAlgorithm) {
 
-    auto hsm = std::make_shared<VirgilHsmYubico>();
-    hsm->connect(kYubicoConnectorUrl);
+    auto hsm = VirgilHsmYubico();
 
     const auto data = VirgilByteArrayUtils::stringToBytes("data to be signed");
     const auto digest = VirgilHash(VirgilHash::Algorithm::SHA384).hash(data);
-    auto key = hsm->generateKey(keyAlgorithm);
+    auto key = hsm.generateKey(keyAlgorithm);
 
     ctx->reset_timer();
     for (size_t i = 0; i < ctx->num_iterations(); ++i) {
-        auto signature = hsm->signHash(digest, key);
+        auto signature = hsm.signHash(digest, key);
     }
     ctx->stop_timer();
 
-    hsm->deleteKey(key);
+    hsm.deleteKey(key);
 }
 
 // RSA

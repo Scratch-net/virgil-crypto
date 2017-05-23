@@ -44,46 +44,64 @@ using virgil::crypto::foundation::VirgilHash;
 using virgil::crypto::hsm::VirgilHsm;
 using virgil::crypto::hsm::VirgilHsmKeyInfo;
 
-VirgilHsmKeyInfo VirgilHsm::getKeyInfo(const VirgilByteArray& privateKey) const {
-    return doGetKeyInfo(unwrapKey(privateKey));
+
+VirgilHsm::VirgilHsm(const VirgilHsm& other) : self_(other.self_->doCopy()) {
+}
+
+VirgilHsm& VirgilHsm::operator=(const VirgilHsm& other) {
+    VirgilHsm tmp(other);
+    *this = std::move(tmp);
+    return *this;
+}
+
+namespace virgil { namespace crypto { namespace hsm {
+
+void VirgilHsm::connect() {
+    self_->doConnect();
+}
+
+void VirgilHsm::disconnect() {
+    self_->doDisconnect();
+}
+
+bool VirgilHsm::isConnected() {
+    return self_->doIsConnected();
+}
+
+VirgilHsmKeyInfo VirgilHsm::getKeyInfo(const VirgilByteArray& privateKey) {
+    return self_->doGetKeyInfo(privateKey);
 }
 
 VirgilByteArray VirgilHsm::generateKey(VirgilKeyPair::Algorithm keyAlgorithm) {
-    return wrapKey(doGenerateKey(keyAlgorithm));
+    return self_->doGenerateKey(keyAlgorithm);
 }
 
 VirgilByteArray VirgilHsm::generateRecommendedKey() {
-    return wrapKey(doGenerateRecommendedKey());
+    return self_->doGenerateRecommendedKey();
 }
 
-VirgilByteArray VirgilHsm::extractPublicKey(const VirgilByteArray& privateKey) const {
-    return doExtractPublicKey(unwrapKey(privateKey));
+VirgilByteArray VirgilHsm::extractPublicKey(const VirgilByteArray& privateKey) {
+    return self_->doExtractPublicKey(privateKey);
 }
 
 void VirgilHsm::deleteKey(const VirgilByteArray& privateKey) {
-    doDeleteKey(privateKey);
+    return self_->doDeleteKey(privateKey);
 }
 
-VirgilByteArray VirgilHsm::exportPublicKey(const VirgilByteArray& privateKey) const {
-    return doExportPublicKey(unwrapKey(privateKey));
+VirgilByteArray VirgilHsm::exportPublicKey(const VirgilByteArray& privateKey) {
+    return self_->doExportPublicKey(privateKey);
 }
 
-VirgilByteArray VirgilHsm::processRSA(const VirgilByteArray& data, const VirgilByteArray& privateKey) const {
-    return doProcessRSA(data, unwrapKey(privateKey));
+VirgilByteArray VirgilHsm::processRSA(const VirgilByteArray& data, const VirgilByteArray& privateKey) {
+    return self_->doProcessRSA(data, privateKey);
 }
 
-VirgilByteArray VirgilHsm::processECDH(const VirgilByteArray& publicKey, const VirgilByteArray& privateKey) const {
-    return doProcessECDH(publicKey, unwrapKey(privateKey));
+VirgilByteArray VirgilHsm::processECDH(const VirgilByteArray& publicKey, const VirgilByteArray& privateKey) {
+    return self_->doProcessECDH(publicKey, privateKey);
 }
 
-VirgilByteArray VirgilHsm::signHash(const VirgilByteArray& digest, const VirgilByteArray& privateKey) const {
-    return doSignHash(digest, unwrapKey(privateKey));
+VirgilByteArray VirgilHsm::signHash(const VirgilByteArray& digest, const VirgilByteArray& privateKey) {
+    return self_->doSignHash(digest, privateKey);
 }
 
-VirgilByteArray VirgilHsm::wrapKey(const VirgilByteArray& privateKey) const {
-    return privateKey;
-}
-
-VirgilByteArray VirgilHsm::unwrapKey(const VirgilByteArray& wrappedPrivateKey) const {
-    return wrappedPrivateKey;
-}
+}}}

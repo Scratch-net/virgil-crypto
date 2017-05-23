@@ -43,12 +43,16 @@ using virgil::crypto::foundation::VirgilHash;
 using virgil::crypto::hsm::VirgilHsm;
 using virgil::crypto::hsm::VirgilHsmSigner;
 
-VirgilHsmSigner::VirgilHsmSigner(std::shared_ptr<const VirgilHsm> hsm, VirgilHash::Algorithm hashAlgorithm)
+VirgilHsmSigner::VirgilHsmSigner(VirgilHsm hsm, VirgilHash::Algorithm hashAlgorithm)
         : VirgilSigner(hashAlgorithm), hsm_(std::move(hsm)) {
 }
 
 VirgilByteArray VirgilHsmSigner::doSignHash(
-        const VirgilByteArray& digest, const VirgilByteArray& privateKey, const VirgilByteArray&) const {
+        const VirgilByteArray& digest, const VirgilByteArray& privateKey, const VirgilByteArray&) {
 
-    return hsm_->signHash(digest, privateKey);
+    if (!hsm_.isConnected()) {
+        hsm_.connect();
+    }
+
+    return hsm_.signHash(digest, privateKey);
 }

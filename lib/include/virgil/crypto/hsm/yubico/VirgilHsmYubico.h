@@ -37,52 +37,58 @@
 #ifndef VIRGIL_CRYPTO_HSM_YUBICO_H
 #define VIRGIL_CRYPTO_HSM_YUBICO_H
 
-#include <virgil/crypto/hsm/VirgilHsm.h>
+#include <virgil/crypto/VirgilByteArray.h>
+
+#include <virgil/crypto/hsm/VirgilHsmKeyInfo.h>
+#include <virgil/crypto/hsm/yubico/VirgilHsmYubicoConfig.h>
 
 #include <memory>
 
 namespace virgil { namespace crypto { namespace hsm { namespace yubico {
 
-class VirgilHsmYubico : public VirgilHsm {
+class VirgilHsmYubico {
 public:
-    VirgilHsmYubico();
+    VirgilHsmYubico(VirgilHsmYubicoConfig config = {});
 
-    virtual ~VirgilHsmYubico() noexcept;
-
-    void connect(const std::string& connectorUrl);
+    void connect();
 
     void disconnect();
 
-    bool isConnected() const;
+    bool isConnected();
 
-    VirgilHsmYubico(VirgilHsmYubico&&);
+    VirgilHsmKeyInfo getKeyInfo(const VirgilByteArray& privateKey);
 
-    VirgilHsmYubico& operator=(VirgilHsmYubico&&);
+    VirgilByteArray generateKey(VirgilKeyPair::Algorithm keyAlgorithm);
 
-private:
-    VirgilHsmKeyInfo doGetKeyInfo(const VirgilByteArray& privateKey) const override;
+    VirgilByteArray generateRecommendedKey();
 
-    VirgilByteArray doGenerateKey(VirgilKeyPair::Algorithm keyAlgorithm) override;
+    VirgilByteArray extractPublicKey(const VirgilByteArray& privateKey);
 
-    VirgilByteArray doGenerateRecommendedKey() override;
+    void deleteKey(const VirgilByteArray& privateKey);
 
-    VirgilByteArray doExtractPublicKey(const VirgilByteArray& privateKey) const override;
+    VirgilByteArray exportPublicKey(const VirgilByteArray& privateKey);
 
-    void doDeleteKey(const VirgilByteArray& privateKey) override;
+    VirgilByteArray processRSA(const VirgilByteArray& data, const VirgilByteArray& privateKey);
 
-    VirgilByteArray doExportPublicKey(const VirgilByteArray& privateKey) const override;
+    VirgilByteArray processECDH(const VirgilByteArray& publicKey, const VirgilByteArray& privateKey);
 
-    VirgilByteArray doProcessRSA(const VirgilByteArray& data, const VirgilByteArray& privateKey) const override;
+    VirgilByteArray signHash(const VirgilByteArray& digest, const VirgilByteArray& privateKey);
 
-    VirgilByteArray doProcessECDH(const VirgilByteArray& publicKey, const VirgilByteArray& privateKey) const override;
+    VirgilHsmYubico(const VirgilHsmYubico&);
 
-    VirgilByteArray doSignHash(const VirgilByteArray& digest, const VirgilByteArray& privateKey) const override;
+    VirgilHsmYubico(VirgilHsmYubico&&) noexcept;
+
+    VirgilHsmYubico& operator=(const VirgilHsmYubico&);
+
+    VirgilHsmYubico& operator=(VirgilHsmYubico&&) noexcept;
+
+    ~VirgilHsmYubico() noexcept;
 
 private:
     class KeyInfo;
     class Session;
 
-    void checkConnection() const;
+    void establishConnection();
 
     VirgilByteArray wrapKey(uint16_t keyId) const;
 

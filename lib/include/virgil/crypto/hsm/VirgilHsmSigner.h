@@ -41,22 +41,20 @@
 
 #include <virgil/crypto/hsm/VirgilHsm.h>
 
-#include <memory>
-
 namespace virgil { namespace crypto { namespace hsm {
 
 class VirgilHsmSigner : public VirgilSigner {
 public:
-    explicit VirgilHsmSigner(std::shared_ptr<const VirgilHsm> hsm,
+    explicit VirgilHsmSigner(VirgilHsm hsm,
             foundation::VirgilHash::Algorithm hashAlgorithm = foundation::VirgilHash::Algorithm::SHA384);
 
 private:
     VirgilByteArray doSignHash(
             const VirgilByteArray& digest, const VirgilByteArray& privateKey,
-            const VirgilByteArray& privateKeyPassword) const override;
+            const VirgilByteArray& privateKeyPassword) override;
 
 private:
-    std::shared_ptr<const VirgilHsm> hsm_;
+    VirgilHsm hsm_;
 };
 
 }}}
