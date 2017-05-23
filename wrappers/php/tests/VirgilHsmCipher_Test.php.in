@@ -1,0 +1,118 @@
+<?php
+/**
+ * Copyright (C) 2015-2016 Virgil Security Inc.
+ *
+ * Lead Maintainer: Virgil Security Inc. <support@virgilsecurity.com>
+ *
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are
+ * met:
+ *
+ *     (1) Redistributions of source code must retain the above copyright
+ *     notice, this list of conditions and the following disclaimer.
+ *
+ *     (2) Redistributions in binary form must reproduce the above copyright
+ *     notice, this list of conditions and the following disclaimer in
+ *     the documentation and/or other materials provided with the
+ *     distribution.
+ *
+ *     (3) Neither the name of the copyright holder nor the names of its
+ *     contributors may be used to endorse or promote products derived from
+ *     this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE AUTHOR ''AS IS'' AND ANY EXPRESS OR
+ * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+ * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ * DISCLAIMED. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT,
+ * INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+ * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+ * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+ * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
+ * STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
+ * IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
+ */
+
+include_once "@PHP_MODULE_FILE_NAME@";
+
+/**
+ * @coversDefaultClass VirgilHsmCipher
+ */
+class VirgilHsmCipher_Test extends PHPUnit_Framework_TestCase {
+
+    /**
+     * @covers VirgilHsmCipher::addKeyRecipient
+     * @covers VirgilHsmCipher::addPasswordRecipient
+     * @covers VirgilHsmCipher::encrypt
+     * @covers VirgilHsmCipher::decryptWithKey
+     * @covers VirgilHsmCipher::decryptWithPassword
+     * @covers VirgilHsmCipher::getContentInfo
+     * @covers VirgilHsmCipher::setContentInfo
+     */
+    public function test_encryption_decryption_with_generated_keys() {
+        $this->check_encryption_decryption_with_generated_keys(false);
+    }
+
+    /**
+     * @covers VirgilHsmCipher::addKeyRecipient
+     * @covers VirgilHsmCipher::addPasswordRecipient
+     * @covers VirgilHsmCipher::encrypt
+     * @covers VirgilHsmCipher::decryptWithKey
+     * @covers VirgilHsmCipher::decryptWithPassword
+     */
+    public function test_encryption_decryption_with_generated_keys_and_embedded_content_info() {
+        $this->check_encryption_decryption_with_generated_keys(true);
+    }
+
+    private function check_encryption_decryption_with_generated_keys($embedContentInfo) {
+        // Create HSM
+        $hsm = new VirgilHsm(new VirgilHsmYubico());
+        // Data to be tested
+        $initialString = "very long string to be encrypted";
+        // Key recipient - Bob
+        $bobId = "BOB-ID-1234";
+        $bobKey = $hsm->generateRecommendedKey();
+        $bobPublicKey = $hsm->exportPublicKey($bobKey);
+        // Key recipient - Ted
+        $tedId = "TED-ID-1234";
+        $tedKey = $hsm->generateRecommendedKey();
+        $tedPublicKey = $hsm->exportPublicKey($tedKey);
+        // Password recipient - Alice
+        $alicePassword = "alice-password";
+        // Create cipher
+        $cipher = new VirgilHsmCipher($hsm);
+        $this->assertNotNull($cipher, "Cipher was not created.");
+        $this->assertNotNull($cipher->_cPtr, "Underlying cipher was not created.");
+        // Add recipients to the cipher
+        $cipher->addKeyRecipient($bobId, $bobPublicKey);
+        $cipher->addKeyRecipient($tedId, $tedPublicKey);
+        $cipher->addPasswordRecipient($alicePassword);
+        // Encrypt data
+        $encryptedData = $cipher->encrypt($initialString, $embedContentInfo);
+        if ($embedContentInfo == false) {
+            $encryptedContentInfo = $cipher->getContentInfo();
+        }
+        // Create new cipher
+        $cipher = new VirgilHsmCipher($hsm);
+        if ($embedContentInfo == false) {
+            // Set content info
+            $cipher->setContentInfo($encryptedContentInfo);
+        }
+        // Decrypt encrypted data
+        $bobPlainText = $cipher->decryptWithKey($encryptedData, $bobId, $bobKey);
+        $tedPlainText = $cipher->decryptWithKey($encryptedData, $tedId, $tedKey);
+        $alicePlainText = $cipher->decryptWithPassword($encryptedData, $alicePassword);
+        // Delete keys
+        $hsm->deleteKey($bobKey);
+        $hsm->deleteKey($tedKey);
+        $hsm->disconnect();
+        // Check decrypted data
+        $this->assertEquals($initialString, $bobPlainText);
+        $this->assertEquals($initialString, $tedPlainText);
+        $this->assertEquals($initialString, $alicePlainText);
+    }
+}
+
+?>

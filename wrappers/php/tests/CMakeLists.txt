@@ -67,6 +67,12 @@ if (LIB_LOW_LEVEL_API)
     )
 endif (LIB_LOW_LEVEL_API)
 
+if (ENABLE_FEATURE_HSM_YUBICO)
+    list (APPEND TEST_FILES
+        VirgilHsmCipher_Test.php
+    )
+endif (ENABLE_FEATURE_HSM_YUBICO)
+
 add_subdirectory (data)
 
 file (GLOB STALE_TEST_FILES "${CMAKE_CURRENT_BINARY_DIR}/*.php")

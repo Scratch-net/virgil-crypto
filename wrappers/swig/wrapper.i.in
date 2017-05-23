@@ -44,6 +44,7 @@
 #cmakedefine SWIG_WRAP_COPY_CONSTRUCTOR
 
 #cmakedefine LIB_LOW_LEVEL_API
+#cmakedefine ENABLE_FEATURE_HSM_YUBICO
 
 %insert ("begin") %{
 #include <cstdlib>
@@ -138,6 +139,20 @@ INCLUDE_CLASS(VirgilTinyCipher, virgil::crypto, virgil/crypto)
 %ignore virgil::crypto::VirgilByteArrayUtils::append;
 %ignore virgil::crypto::VirgilByteArrayUtils::popBytes;
 INCLUDE_CLASS(VirgilByteArrayUtils, virgil::crypto, virgil/crypto)
+
+// Package: virgil::crypto::hsm
+#if defined(ENABLE_FEATURE_HSM_YUBICO)
+    INCLUDE_CLASS(VirgilHsmKeyInfo, virgil::crypto::hsm, virgil/crypto/hsm)
+    INCLUDE_CLASS(VirgilHsm, virgil::crypto::hsm, virgil/crypto/hsm)
+    INCLUDE_CLASS(VirgilHsmCipher, virgil::crypto::hsm, virgil/crypto/hsm)
+    INCLUDE_CLASS(VirgilHsmSigner, virgil::crypto::hsm, virgil/crypto/hsm)
+    // Package: virgil::crypto::hsm::yubico
+    INCLUDE_CLASS_WITH_COPY_CONSTRUCTOR(VirgilHsmYubicoConfig, virgil::crypto::hsm::yubico, virgil/crypto/hsm/yubico)
+    INCLUDE_CLASS_WITH_COPY_CONSTRUCTOR(VirgilHsmYubico, virgil::crypto::hsm::yubico, virgil/crypto/hsm/yubico)
+    %extend virgil::crypto::hsm::VirgilHsm {
+        %template(VirgilHsm) VirgilHsm<virgil::crypto::hsm::yubico::VirgilHsmYubico>;
+    };
+#endif /* ENABLE_FEATURE_HSM_YUBICO */
 
 // Package: virgil::crypto::foundation::cms
 #if defined(LIB_LOW_LEVEL_API)
