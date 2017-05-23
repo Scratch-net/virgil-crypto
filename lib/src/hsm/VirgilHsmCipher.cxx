@@ -49,6 +49,7 @@
 #include <mbedtls/ecies_internal.h>
 
 #include <memory>
+#include <cstring>
 
 using virgil::crypto::VirgilCipher;
 using virgil::crypto::VirgilByteArray;
@@ -107,7 +108,7 @@ static int hsm_key_compute_shared_wrap(
         return MBEDTLS_ERR_ECIES_OUTPUT_TOO_SMALL;
     }
 
-    std::copy(result.begin(), result.end(), shared);
+    memcpy(shared, result.data(), result.size());
 
     return 0;
 }
