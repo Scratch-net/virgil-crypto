@@ -55,6 +55,7 @@ include_directories (${${WRAPPED_LIB_NAME}_BINARY_DIR}/include)
 include_directories (swig)
 
 # Add wrappers
+set (CMAKE_INSTALL_RPATH "@loader_path")
 set (LANG_DIR ${LANG})
 if (EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/${LANG_DIR}")
     add_subdirectory (${LANG_DIR})
