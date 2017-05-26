@@ -375,6 +375,10 @@ if (ADD_COMPILER_INFO)
     endif ()
 endif ()
 
+if (ENABLE_FEATURE_HSM_YUBICO)
+    set (LIB_NAME_FULL "${LIB_NAME_FULL}-yubico")
+endif (ENABLE_FEATURE_HSM_YUBICO)
+
 message (STATUS "Library full name: ${LIB_NAME_FULL}")
 
 file (WRITE "${CMAKE_CURRENT_BINARY_DIR}/lib_name_full.txt" "${LIB_NAME_FULL}")
